@@ -268,28 +268,35 @@
 
 <script>
   // ─── CONFIGURATION ──────────────────────────────────────────────────────────
-  //
-  // 1. Remplacez FLOW_URL par l'URL de votre Power Automate Flow HTTP trigger
-  // 2. Les paramètres reçus depuis PowerApps via l'URL :
-  //    ?photo=URL_DE_LA_PHOTO         → URL de la photo SharePoint/autre
-  //    &itemId=ID_ITEM_SHAREPOINT     → ID de l'item à mettre à jour
-  //    &fileName=nom_fichier.jpg      → Nom du fichier original (optionnel)
-  //
+  // Remplacez FLOW_URL par l'URL de votre Power Automate Flow HTTP trigger
   const FLOW_URL = 'VOTRE_POWER_AUTOMATE_FLOW_URL_ICI';
-  //
   // ────────────────────────────────────────────────────────────────────────────
 
-  const params = new URLSearchParams(window.location.search);
-  const photoURL  = params.get('photo');
-  const itemId    = params.get('itemId');    // ID de l'item SharePoint
-  const fileName  = params.get('fileName');  // Nom du fichier optionnel
-  const constatId = params.get('constatId'); // Tout autre champ personnalisé
+  // Données reçues via postMessage depuis PowerApps
+  let itemId   = '';
+  let fileName = '';
 
   let canvas, bgImage, currentTool = 'select';
   let isDrawing = false, startX, startY, activeShape;
   let history = [];
   let currentColor = '#ff0000';
   let currentStroke = 4;
+
+  // ─── ÉCOUTE postMessage depuis PowerApps ────────────────────────────────────
+  window.addEventListener('message', function(event) {
+    const data = event.data;
+
+    // PowerApps envoie soit une string base64 directement,
+    // soit un objet { type, image, itemId, fileName }
+    if (typeof data === 'string' && data.length > 100) {
+      // String base64 brute (FrameSendMessage envoie une string)
+      loadPhotoFromBase64(data);
+    } else if (data && data.type === 'LOAD_PHOTO') {
+      itemId   = data.itemId   || '';
+      fileName = data.fileName || '';
+      loadPhotoFromBase64(data.image);
+    }
+  });
 
   // ─── INIT ────────────────────────────────────────────────────────────────────
   window.onload = function() {
@@ -298,24 +305,33 @@
       preserveObjectStacking: true
     });
 
-    if (photoURL) {
-      loadPhoto(photoURL);
+    // Vérifier si une photo est passée en paramètre URL (fallback)
+    const params = new URLSearchParams(window.location.search);
+    const photoURL = params.get('photo');
+    itemId   = params.get('itemId')   || '';
+    fileName = params.get('fileName') || '';
+
+    if (photoURL && photoURL.startsWith('data:')) {
+      loadPhotoFromBase64(photoURL);
     } else {
-      hideLoading();
-      canvas.setWidth(800);
-      canvas.setHeight(600);
-      const rect = new fabric.Rect({width:800,height:600,fill:'#313244',selectable:false,evented:false});
-      canvas.add(rect);
-      const txt = new fabric.Text('Aucune photo — mode démo', {left:200,top:270,fill:'#6c7086',fontSize:20,selectable:false});
-      canvas.add(txt);
+      // Mode attente — afficher spinner jusqu'à réception du postMessage
+      document.getElementById('loading').querySelector('p').textContent =
+        'En attente de la photo...';
     }
 
     setupCanvasEvents();
+
+    // Signaler à PowerApps que l'éditeur est prêt
+    try { window.parent.postMessage({ type: 'EDITEUR_PRET' }, '*'); } catch(e) {}
   };
 
-  function loadPhoto(url) {
-    fabric.Image.fromURL(url, function(img) {
-      if (!img) { hideLoading(); showToast('Impossible de charger la photo', 'error'); return; }
+  function loadPhotoFromBase64(base64Data) {
+    fabric.Image.fromURL(base64Data, function(img) {
+      if (!img || !img.width) {
+        hideLoading();
+        showToast('Impossible de charger la photo', 'error');
+        return;
+      }
 
       const maxW = window.innerWidth - 64;
       const maxH = window.innerHeight - 160;
@@ -324,17 +340,20 @@
       const w = Math.round(img.width * scale);
       const h = Math.round(img.height * scale);
 
+      canvas.clear();
       canvas.setWidth(w);
       canvas.setHeight(h);
 
-      img.set({ scaleX: scale, scaleY: scale, left: 0, top: 0, selectable: false, evented: false, originX: 'left', originY: 'top' });
+      img.set({ scaleX: scale, scaleY: scale, left: 0, top: 0,
+                selectable: false, evented: false,
+                originX: 'left', originY: 'top' });
       canvas.add(img);
       canvas.sendToBack(img);
       bgImage = img;
 
       saveHistory();
       hideLoading();
-    }, { crossOrigin: 'anonymous' });
+    });
   }
 
   function hideLoading() {
