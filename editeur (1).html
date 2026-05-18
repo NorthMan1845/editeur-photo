@@ -8,16 +8,11 @@
 <style>
   * { margin: 0; padding: 0; box-sizing: border-box; }
 
-  html, body {
-    height: 100%;
-    width: 100%;
-  }
-
   body {
     font-family: 'Segoe UI', sans-serif;
     background: #1e1e2e;
     color: #cdd6f4;
-    height: 100%;
+    height: 100vh;
     display: flex;
     flex-direction: column;
     overflow: hidden;
@@ -60,13 +55,9 @@
   }
   .tool-btn:hover { background: #45475a; border-color: #89b4fa; }
   .tool-btn.active { background: #89b4fa; color: #1e1e2e; border-color: #89b4fa; font-weight: 600; }
-
-  .tool-btn.danger { }
   .tool-btn.danger:hover { background: #f38ba8; border-color: #f38ba8; color: #1e1e2e; }
-
   .tool-btn.success:hover { background: #a6e3a1; border-color: #a6e3a1; color: #1e1e2e; }
 
-  /* Color + size pickers */
   #colorPicker {
     width: 32px; height: 32px;
     border: 2px solid #45475a;
@@ -75,8 +66,6 @@
     padding: 2px;
     background: #313244;
   }
-
-  label[for="colorPicker"] { font-size: 12px; color: #a6adc8; }
 
   select {
     background: #313244;
@@ -145,7 +134,6 @@
     cursor: crosshair;
     z-index: 10;
   }
-
   #cropRect {
     position: absolute;
     border: 2px dashed #89b4fa;
@@ -174,6 +162,29 @@
     animation: spin 0.8s linear infinite;
   }
   @keyframes spin { to { transform: rotate(360deg); } }
+
+  /* Toast notification */
+  #toast {
+    position: fixed;
+    bottom: 80px;
+    left: 50%;
+    transform: translateX(-50%) translateY(20px);
+    background: #313244;
+    color: #cdd6f4;
+    border: 1px solid #45475a;
+    border-radius: 10px;
+    padding: 12px 24px;
+    font-size: 14px;
+    font-weight: 600;
+    opacity: 0;
+    transition: all 0.3s ease;
+    z-index: 200;
+    pointer-events: none;
+    white-space: nowrap;
+  }
+  #toast.show { opacity: 1; transform: translateX(-50%) translateY(0); }
+  #toast.success { background: #1e3a2f; border-color: #a6e3a1; color: #a6e3a1; }
+  #toast.error { background: #3a1e1e; border-color: #f38ba8; color: #f38ba8; }
 </style>
 </head>
 <body>
@@ -184,56 +195,37 @@
   <p>Chargement de la photo...</p>
 </div>
 
+<!-- Toast -->
+<div id="toast"></div>
+
 <!-- Toolbar -->
 <div id="toolbar">
 
   <div class="tool-group">
     <span style="font-size:12px;color:#6c7086;margin-right:4px;">Sélection</span>
-    <button class="tool-btn active" id="btn-select" onclick="setTool('select')" title="Sélectionner/déplacer">
-      ↖ Sélect.
-    </button>
-    <button class="tool-btn danger" id="btn-delete" onclick="deleteSelected()" title="Supprimer l'élément sélectionné">
-      🗑 Suppr.
-    </button>
+    <button class="tool-btn active" id="btn-select" onclick="setTool('select')" title="Sélectionner/déplacer">↖ Sélect.</button>
+    <button class="tool-btn danger" id="btn-delete" onclick="deleteSelected()" title="Supprimer l'élément sélectionné">🗑 Suppr.</button>
   </div>
 
   <div class="tool-group">
     <span style="font-size:12px;color:#6c7086;margin-right:4px;">Formes</span>
-    <button class="tool-btn" id="btn-arrow" onclick="setTool('arrow')" title="Flèche">
-      → Flèche
-    </button>
-    <button class="tool-btn" id="btn-rect" onclick="setTool('rect')" title="Rectangle">
-      ▭ Rect.
-    </button>
-    <button class="tool-btn" id="btn-circle" onclick="setTool('circle')" title="Cercle">
-      ○ Cercle
-    </button>
-    <button class="tool-btn" id="btn-line" onclick="setTool('line')" title="Ligne">
-      ╱ Ligne
-    </button>
+    <button class="tool-btn" id="btn-arrow" onclick="setTool('arrow')" title="Flèche">→ Flèche</button>
+    <button class="tool-btn" id="btn-rect" onclick="setTool('rect')" title="Rectangle">▭ Rect.</button>
+    <button class="tool-btn" id="btn-circle" onclick="setTool('circle')" title="Cercle">○ Cercle</button>
+    <button class="tool-btn" id="btn-line" onclick="setTool('line')" title="Ligne">╱ Ligne</button>
   </div>
 
   <div class="tool-group">
     <span style="font-size:12px;color:#6c7086;margin-right:4px;">Texte</span>
-    <button class="tool-btn" id="btn-text" onclick="setTool('text')" title="Ajouter du texte">
-      T Texte
-    </button>
+    <button class="tool-btn" id="btn-text" onclick="setTool('text')" title="Ajouter du texte">T Texte</button>
   </div>
 
   <div class="tool-group">
     <span style="font-size:12px;color:#6c7086;margin-right:4px;">Image</span>
-    <button class="tool-btn" id="btn-crop" onclick="startCrop()" title="Rogner la photo">
-      ✂ Rogner
-    </button>
-    <button class="tool-btn" onclick="flipH()" title="Miroir horizontal">
-      ↔ Flip H
-    </button>
-    <button class="tool-btn" onclick="flipV()" title="Miroir vertical">
-      ↕ Flip V
-    </button>
-    <button class="tool-btn" onclick="rotateImg(90)" title="Rotation 90°">
-      ↻ 90°
-    </button>
+    <button class="tool-btn" id="btn-crop" onclick="startCrop()" title="Rogner la photo">✂ Rogner</button>
+    <button class="tool-btn" onclick="flipH()" title="Miroir horizontal">↔ Flip H</button>
+    <button class="tool-btn" onclick="flipV()" title="Miroir vertical">↕ Flip V</button>
+    <button class="tool-btn" onclick="rotateImg(90)" title="Rotation 90°">↻ 90°</button>
   </div>
 
   <div class="tool-group">
@@ -275,17 +267,31 @@
 </div>
 
 <script>
-  // ─── INIT ───────────────────────────────────────────────────────────────────
+  // ─── CONFIGURATION ──────────────────────────────────────────────────────────
+  //
+  // 1. Remplacez FLOW_URL par l'URL de votre Power Automate Flow HTTP trigger
+  // 2. Les paramètres reçus depuis PowerApps via l'URL :
+  //    ?photo=URL_DE_LA_PHOTO         → URL de la photo SharePoint/autre
+  //    &itemId=ID_ITEM_SHAREPOINT     → ID de l'item à mettre à jour
+  //    &fileName=nom_fichier.jpg      → Nom du fichier original (optionnel)
+  //
+  const FLOW_URL = 'VOTRE_POWER_AUTOMATE_FLOW_URL_ICI';
+  //
+  // ────────────────────────────────────────────────────────────────────────────
+
+  const params = new URLSearchParams(window.location.search);
+  const photoURL  = params.get('photo');
+  const itemId    = params.get('itemId');    // ID de l'item SharePoint
+  const fileName  = params.get('fileName');  // Nom du fichier optionnel
+  const constatId = params.get('constatId'); // Tout autre champ personnalisé
+
   let canvas, bgImage, currentTool = 'select';
   let isDrawing = false, startX, startY, activeShape;
   let history = [];
   let currentColor = '#ff0000';
   let currentStroke = 4;
 
-  // Get photo URL from query param
-  const params = new URLSearchParams(window.location.search);
-  const photoURL = params.get('photo');
-
+  // ─── INIT ────────────────────────────────────────────────────────────────────
   window.onload = function() {
     canvas = new fabric.Canvas('mainCanvas', {
       selection: true,
@@ -295,8 +301,7 @@
     if (photoURL) {
       loadPhoto(photoURL);
     } else {
-      // Demo mode — load a placeholder
-      hiddeLoading();
+      hideLoading();
       canvas.setWidth(800);
       canvas.setHeight(600);
       const rect = new fabric.Rect({width:800,height:600,fill:'#313244',selectable:false,evented:false});
@@ -310,9 +315,8 @@
 
   function loadPhoto(url) {
     fabric.Image.fromURL(url, function(img) {
-      if (!img) { hiddeLoading(); return; }
+      if (!img) { hideLoading(); showToast('Impossible de charger la photo', 'error'); return; }
 
-      // Scale to fit screen nicely
       const maxW = window.innerWidth - 64;
       const maxH = window.innerHeight - 160;
       const scale = Math.min(maxW / img.width, maxH / img.height, 1);
@@ -329,11 +333,11 @@
       bgImage = img;
 
       saveHistory();
-      hiddeLoading();
+      hideLoading();
     }, { crossOrigin: 'anonymous' });
   }
 
-  function hiddeLoading() {
+  function hideLoading() {
     document.getElementById('loading').style.display = 'none';
   }
 
@@ -344,7 +348,6 @@
     canvas.selection = (tool === 'select');
     canvas.forEachObject(o => { if (o !== bgImage) o.selectable = (tool === 'select'); });
 
-    // Update button states
     document.querySelectorAll('.tool-btn[id^="btn-"]').forEach(b => b.classList.remove('active'));
     const btn = document.getElementById('btn-' + tool);
     if (btn) btn.classList.add('active');
@@ -420,10 +423,7 @@
     isDrawing = false;
 
     if (activeShape) {
-      // For arrows, add arrowhead
-      if (currentTool === 'arrow') {
-        addArrowHead(activeShape);
-      }
+      if (currentTool === 'arrow') addArrowHead(activeShape);
       activeShape.set({ selectable: true });
       activeShape = null;
       saveHistory();
@@ -447,8 +447,6 @@
     });
 
     canvas.add(arrowHead);
-
-    // Group line + arrowhead
     canvas.remove(line);
     const group = new fabric.Group([
       new fabric.Line([x1, y1, x2, y2], { stroke: currentColor, strokeWidth: currentStroke }),
@@ -491,11 +489,8 @@
 
   function rotateImg(deg) {
     if (!bgImage) return;
-    // Rotate entire canvas content
     const currentAngle = bgImage.angle || 0;
     bgImage.set({ angle: currentAngle + deg, originX: 'center', originY: 'center', left: canvas.width/2, top: canvas.height/2 });
-
-    // Swap canvas dimensions
     const w = canvas.width, h = canvas.height;
     canvas.setWidth(h);
     canvas.setHeight(w);
@@ -556,7 +551,6 @@
     const h = Math.abs(cropEndY - cropStartY);
     if (w < 10 || h < 10) { setTool('select'); return; }
 
-    // Export cropped area
     const dataURL = canvas.toDataURL({ left: x, top: y, width: w, height: h, format: 'png' });
 
     fabric.Image.fromURL(dataURL, function(img) {
@@ -638,31 +632,83 @@
     if (e.ctrlKey && e.key === 'z') undo();
   });
 
-  // ─── SAVE ────────────────────────────────────────────────────────────────────
-  function saveImage() {
+  // ─── TOAST ──────────────────────────────────────────────────────────────────
+  function showToast(message, type = '') {
+    const toast = document.getElementById('toast');
+    toast.textContent = message;
+    toast.className = 'show ' + type;
+    setTimeout(() => { toast.className = ''; }, 3500);
+  }
+
+  // ─── SAVE → POWER AUTOMATE → SHAREPOINT ─────────────────────────────────────
+  async function saveImage() {
     const btn = document.getElementById('btnSave');
     btn.disabled = true;
-    btn.textContent = '⏳ Sauvegarde...';
+    btn.textContent = '⏳ Envoi en cours...';
 
     // Deselect all before export
     canvas.discardActiveObject();
     canvas.renderAll();
 
+    // Export as PNG base64 (sans le préfixe "data:image/png;base64,")
     const dataURL = canvas.toDataURL({ format: 'png', quality: 1 });
+    const base64Data = dataURL.split(',')[1];
 
-    // Send to PowerApps parent
+    // Générer un nom de fichier avec timestamp
+    const ts = new Date().toISOString().replace(/[:.]/g, '-');
+    const outFileName = fileName
+      ? fileName.replace(/\.[^/.]+$/, '') + '_annote_' + ts + '.png'
+      : 'photo_annotee_' + ts + '.png';
+
+    // Payload envoyé au Flow Power Automate
+    const payload = {
+      imageBase64: base64Data,       // Image PNG en base64
+      fileName: outFileName,          // Nom du fichier à créer sur SharePoint
+      itemId: itemId || '',           // ID item SharePoint pour mise à jour
+      constatId: constatId || '',     // Champ métier personnalisé
+      photoOriginale: photoURL || ''  // URL de la photo originale
+    };
+
     try {
-      window.parent.postMessage({ type: 'PHOTO_ANNOTEE', image: dataURL }, '*');
-    } catch(e) {}
+      if (!FLOW_URL || FLOW_URL === 'VOTRE_POWER_AUTOMATE_FLOW_URL_ICI') {
+        // Mode démo — pas de flow configuré
+        console.warn('⚠️ FLOW_URL non configuré. Payload prêt :', payload);
+        showToast('✅ Mode démo — image prête (Flow non configuré)', 'success');
+        btn.textContent = '✅ Prêt (démo)';
+        setTimeout(() => { btn.disabled = false; btn.textContent = '💾 Sauvegarder'; }, 3000);
+        return;
+      }
 
-    // Also store in sessionStorage as fallback
-    try { sessionStorage.setItem('photoAnnotee', dataURL); } catch(e) {}
+      const response = await fetch(FLOW_URL, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(payload)
+      });
 
-    btn.textContent = '✅ Sauvegardé!';
-    setTimeout(() => {
+      if (response.ok) {
+        showToast('✅ Photo sauvegardée sur SharePoint !', 'success');
+        btn.textContent = '✅ Sauvegardé!';
+
+        // Notifier PowerApps (si intégré dans un iframe/WebView)
+        try {
+          window.parent.postMessage({ type: 'PHOTO_ANNOTEE_SAUVEGARDEE', fileName: outFileName, itemId }, '*');
+        } catch(e) {}
+
+        setTimeout(() => { btn.disabled = false; btn.textContent = '💾 Sauvegarder'; }, 3000);
+      } else {
+        const errText = await response.text();
+        console.error('Erreur Flow:', response.status, errText);
+        showToast('❌ Erreur lors de la sauvegarde (' + response.status + ')', 'error');
+        btn.disabled = false;
+        btn.textContent = '💾 Sauvegarder';
+      }
+
+    } catch (err) {
+      console.error('Erreur réseau:', err);
+      showToast('❌ Erreur réseau — vérifiez la connexion', 'error');
       btn.disabled = false;
       btn.textContent = '💾 Sauvegarder';
-    }, 2000);
+    }
   }
 </script>
 </body>
