@@ -326,6 +326,8 @@
   };
 
   function loadPhotoFromBase64(base64Data) {
+    // Détecte si c'est une URL (http) ou du base64
+    const isURL = typeof base64Data === 'string' && base64Data.startsWith('http');
     fabric.Image.fromURL(base64Data, function(img) {
       if (!img || !img.width) {
         hideLoading();
@@ -353,7 +355,7 @@
 
       saveHistory();
       hideLoading();
-    });
+    }, { crossOrigin: 'anonymous' });
   }
 
   function hideLoading() {
