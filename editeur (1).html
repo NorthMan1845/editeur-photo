@@ -311,7 +311,7 @@
     itemId   = params.get('itemId')   || '';
     fileName = params.get('fileName') || '';
 
-    if (photoURL && photoURL.startsWith('data:')) {
+    if (photoURL) {
       loadPhotoFromBase64(photoURL);
     } else {
       // Mode attente — afficher spinner jusqu'à réception du postMessage
