@@ -56,7 +56,9 @@
   .tool-btn:hover { background: #45475a; border-color: #89b4fa; }
   .tool-btn.active { background: #89b4fa; color: #1e1e2e; border-color: #89b4fa; font-weight: 600; }
   .tool-btn.danger:hover { background: #f38ba8; border-color: #f38ba8; color: #1e1e2e; }
-  .tool-btn.success:hover { background: #a6e3a1; border-color: #a6e3a1; color: #1e1e2e; }
+  .tool-btn.success { background: #a6e3a1; color: #1e1e2e; border-color: #a6e3a1; font-weight: 600; }
+  .tool-btn.success:hover { background: #94d494; border-color: #94d494; }
+  .tool-btn:disabled { opacity: 0.4; cursor: not-allowed; }
 
   #colorPicker {
     width: 32px; height: 32px;
@@ -89,9 +91,36 @@
     padding: 16px;
   }
 
+  /* Placeholder quand aucune image */
+  #placeholder {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 16px;
+    color: #6c7086;
+    text-align: center;
+  }
+  #placeholder svg { opacity: 0.3; }
+  #placeholder p { font-size: 15px; }
+  #placeholder .open-hint {
+    background: #313244;
+    border: 1px dashed #45475a;
+    border-radius: 12px;
+    padding: 32px 48px;
+    cursor: pointer;
+    transition: all 0.2s;
+  }
+  #placeholder .open-hint:hover {
+    border-color: #89b4fa;
+    color: #89b4fa;
+    background: #1e2a3a;
+  }
+
   #canvas-wrapper {
     position: relative;
     box-shadow: 0 8px 32px rgba(0,0,0,0.5);
+    display: none;
   }
 
   canvas { display: block; }
@@ -108,21 +137,7 @@
   }
 
   #status { font-size: 12px; color: #6c7086; }
-
-  .btn-save {
-    background: #a6e3a1;
-    color: #1e1e2e;
-    border: none;
-    border-radius: 8px;
-    padding: 8px 24px;
-    font-size: 14px;
-    font-weight: 700;
-    cursor: pointer;
-    transition: all 0.15s;
-    letter-spacing: 0.5px;
-  }
-  .btn-save:hover { background: #94d494; transform: translateY(-1px); }
-  .btn-save:disabled { background: #45475a; color: #6c7086; cursor: not-allowed; transform: none; }
+  #fileName { font-size: 12px; color: #a6adc8; max-width: 300px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 
   /* Crop overlay */
   #cropOverlay {
@@ -140,28 +155,6 @@
     background: rgba(137,180,250,0.1);
     pointer-events: none;
   }
-
-  /* Loading */
-  #loading {
-    position: fixed;
-    inset: 0;
-    background: #1e1e2e;
-    display: flex;
-    flex-direction: column;
-    align-items: center;
-    justify-content: center;
-    gap: 16px;
-    z-index: 100;
-  }
-  #loading p { color: #a6adc8; font-size: 14px; }
-  .spinner {
-    width: 40px; height: 40px;
-    border: 3px solid #313244;
-    border-top-color: #89b4fa;
-    border-radius: 50%;
-    animation: spin 0.8s linear infinite;
-  }
-  @keyframes spin { to { transform: rotate(360deg); } }
 
   /* Toast notification */
   #toast {
@@ -185,21 +178,25 @@
   #toast.show { opacity: 1; transform: translateX(-50%) translateY(0); }
   #toast.success { background: #1e3a2f; border-color: #a6e3a1; color: #a6e3a1; }
   #toast.error { background: #3a1e1e; border-color: #f38ba8; color: #f38ba8; }
+
+  /* Input file caché */
+  #fileInput { display: none; }
 </style>
 </head>
 <body>
 
-<!-- Loading screen -->
-<div id="loading">
-  <div class="spinner"></div>
-  <p>Chargement de la photo...</p>
-</div>
+<!-- Input fichier caché -->
+<input type="file" id="fileInput" accept="image/*" onchange="handleFileOpen(event)">
 
 <!-- Toast -->
 <div id="toast"></div>
 
 <!-- Toolbar -->
 <div id="toolbar">
+
+  <div class="tool-group">
+    <button class="tool-btn success" onclick="document.getElementById('fileInput').click()" title="Ouvrir une image depuis le disque">📂 Ouvrir</button>
+  </div>
 
   <div class="tool-group">
     <span style="font-size:12px;color:#6c7086;margin-right:4px;">Sélection</span>
@@ -252,6 +249,19 @@
 
 <!-- Canvas -->
 <div id="canvas-container">
+
+  <!-- Placeholder affiché quand aucune image n'est chargée -->
+  <div id="placeholder">
+    <div class="open-hint" onclick="document.getElementById('fileInput').click()">
+      <svg width="64" height="64" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5">
+        <rect x="3" y="3" width="18" height="18" rx="2"/><circle cx="8.5" cy="8.5" r="1.5"/>
+        <polyline points="21 15 16 10 5 21"/>
+      </svg>
+      <p style="margin-top:12px;font-size:16px;">Cliquez ici pour ouvrir une image</p>
+      <p style="margin-top:6px;font-size:12px;opacity:0.6;">JPG, PNG, GIF, WebP…</p>
+    </div>
+  </div>
+
   <div id="canvas-wrapper">
     <canvas id="mainCanvas"></canvas>
     <div id="cropOverlay">
@@ -262,41 +272,20 @@
 
 <!-- Bottom bar -->
 <div id="bottombar">
-  <span id="status">Outil actif : Sélection</span>
-  <button class="btn-save" id="btnSave" onclick="saveImage()">💾 Sauvegarder</button>
+  <div style="display:flex;gap:16px;align-items:center;">
+    <span id="status">Aucune image chargée</span>
+    <span id="fileName"></span>
+  </div>
+  <button class="tool-btn success" id="btnSave" onclick="saveImage()" style="padding:8px 20px;font-size:14px;" title="Sauvegarder l'image annotée sur le disque">💾 Sauvegarder</button>
 </div>
 
 <script>
-  // ─── CONFIGURATION ──────────────────────────────────────────────────────────
-  // Remplacez FLOW_URL par l'URL de votre Power Automate Flow HTTP trigger
-  const FLOW_URL = 'VOTRE_POWER_AUTOMATE_FLOW_URL_ICI';
-  // ────────────────────────────────────────────────────────────────────────────
-
-  // Données reçues via postMessage depuis PowerApps
-  let itemId   = '';
-  let fileName = '';
-
   let canvas, bgImage, currentTool = 'select';
   let isDrawing = false, startX, startY, activeShape;
   let history = [];
   let currentColor = '#ff0000';
   let currentStroke = 4;
-
-  // ─── ÉCOUTE postMessage depuis PowerApps ────────────────────────────────────
-  window.addEventListener('message', function(event) {
-    const data = event.data;
-
-    // PowerApps envoie soit une string base64 directement,
-    // soit un objet { type, image, itemId, fileName }
-    if (typeof data === 'string' && data.length > 100) {
-      // String base64 brute (FrameSendMessage envoie une string)
-      loadPhotoFromBase64(data);
-    } else if (data && data.type === 'LOAD_PHOTO') {
-      itemId   = data.itemId   || '';
-      fileName = data.fileName || '';
-      loadPhotoFromBase64(data.image);
-    }
-  });
+  let openedFileName = '';
 
   // ─── INIT ────────────────────────────────────────────────────────────────────
   window.onload = function() {
@@ -304,33 +293,30 @@
       selection: true,
       preserveObjectStacking: true
     });
-
-    // Vérifier si une photo est passée en paramètre URL (fallback)
-    const params = new URLSearchParams(window.location.search);
-    const photoURL = params.get('photo');
-    itemId   = params.get('itemId')   || '';
-    fileName = params.get('fileName') || '';
-
-    if (photoURL) {
-      loadPhotoFromBase64(photoURL);
-    } else {
-      // Mode attente — afficher spinner jusqu'à réception du postMessage
-      document.getElementById('loading').querySelector('p').textContent =
-        'En attente de la photo...';
-    }
-
     setupCanvasEvents();
-
-    // Signaler à PowerApps que l'éditeur est prêt
-    try { window.parent.postMessage({ type: 'EDITEUR_PRET' }, '*'); } catch(e) {}
   };
 
-  function loadPhotoFromBase64(base64Data) {
-    // Détecte si c'est une URL (http) ou du base64
-    const isURL = typeof base64Data === 'string' && base64Data.startsWith('http');
-    fabric.Image.fromURL(base64Data, function(img) {
+  // ─── OUVRIR IMAGE DEPUIS LE DISQUE ──────────────────────────────────────────
+  function handleFileOpen(event) {
+    const file = event.target.files[0];
+    if (!file) return;
+
+    openedFileName = file.name;
+    document.getElementById('fileName').textContent = '📄 ' + file.name;
+
+    const reader = new FileReader();
+    reader.onload = function(e) {
+      loadPhotoFromDataURL(e.target.result);
+    };
+    reader.readAsDataURL(file);
+
+    // Reset input pour permettre de rouvrir le même fichier
+    event.target.value = '';
+  }
+
+  function loadPhotoFromDataURL(dataURL) {
+    fabric.Image.fromURL(dataURL, function(img) {
       if (!img || !img.width) {
-        hideLoading();
         showToast('Impossible de charger la photo', 'error');
         return;
       }
@@ -353,13 +339,14 @@
       canvas.sendToBack(img);
       bgImage = img;
 
-      saveHistory();
-      hideLoading();
-    }, { crossOrigin: 'anonymous' });
-  }
+      // Afficher le canvas, cacher le placeholder
+      document.getElementById('placeholder').style.display = 'none';
+      document.getElementById('canvas-wrapper').style.display = 'block';
 
-  function hideLoading() {
-    document.getElementById('loading').style.display = 'none';
+      saveHistory();
+      setTool('select');
+      showToast('✅ Image chargée !', 'success');
+    });
   }
 
   // ─── TOOL MANAGEMENT ────────────────────────────────────────────────────────
@@ -525,6 +512,7 @@
   let isCropping = false;
 
   function startCrop() {
+    if (!bgImage) { showToast('Ouvrez d\'abord une image', 'error'); return; }
     setTool('crop');
     const overlay = document.getElementById('cropOverlay');
     const cropRect = document.getElementById('cropRect');
@@ -620,6 +608,7 @@
   }
 
   function clearAnnotations() {
+    if (!bgImage) return;
     if (!confirm('Effacer toutes les annotations?')) return;
     canvas.getObjects().forEach(o => { if (o !== bgImage) canvas.remove(o); });
     canvas.renderAll();
@@ -661,75 +650,34 @@
     setTimeout(() => { toast.className = ''; }, 3500);
   }
 
-  // ─── SAVE → POWER AUTOMATE → SHAREPOINT ─────────────────────────────────────
-  async function saveImage() {
-    const btn = document.getElementById('btnSave');
-    btn.disabled = true;
-    btn.textContent = '⏳ Envoi en cours...';
+  // ─── SAUVEGARDER SUR LE DISQUE ───────────────────────────────────────────────
+  function saveImage() {
+    if (!bgImage) {
+      showToast('Ouvrez d\'abord une image', 'error');
+      return;
+    }
 
-    // Deselect all before export
+    // Désélectionner avant export
     canvas.discardActiveObject();
     canvas.renderAll();
 
-    // Export as PNG base64 (sans le préfixe "data:image/png;base64,")
-    const dataURL = canvas.toDataURL({ format: 'png', quality: 1 });
-    const base64Data = dataURL.split(',')[1];
-
-    // Générer un nom de fichier avec timestamp
-    const ts = new Date().toISOString().replace(/[:.]/g, '-');
-    const outFileName = fileName
-      ? fileName.replace(/\.[^/.]+$/, '') + '_annote_' + ts + '.png'
+    // Générer un nom de fichier basé sur l'original
+    const ts = new Date().toISOString().slice(0, 19).replace(/[T:]/g, '-');
+    const baseName = openedFileName
+      ? openedFileName.replace(/\.[^/.]+$/, '') + '_annote_' + ts + '.png'
       : 'photo_annotee_' + ts + '.png';
 
-    // Payload envoyé au Flow Power Automate
-    const payload = {
-      imageBase64: base64Data,       // Image PNG en base64
-      fileName: outFileName,          // Nom du fichier à créer sur SharePoint
-      itemId: itemId || '',           // ID item SharePoint pour mise à jour
-      constatId: constatId || '',     // Champ métier personnalisé
-      photoOriginale: photoURL || ''  // URL de la photo originale
-    };
+    // Exporter en PNG et déclencher le téléchargement
+    const dataURL = canvas.toDataURL({ format: 'png', quality: 1 });
 
-    try {
-      if (!FLOW_URL || FLOW_URL === 'VOTRE_POWER_AUTOMATE_FLOW_URL_ICI') {
-        // Mode démo — pas de flow configuré
-        console.warn('⚠️ FLOW_URL non configuré. Payload prêt :', payload);
-        showToast('✅ Mode démo — image prête (Flow non configuré)', 'success');
-        btn.textContent = '✅ Prêt (démo)';
-        setTimeout(() => { btn.disabled = false; btn.textContent = '💾 Sauvegarder'; }, 3000);
-        return;
-      }
+    const a = document.createElement('a');
+    a.href = dataURL;
+    a.download = baseName;
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
 
-      const response = await fetch(FLOW_URL, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(payload)
-      });
-
-      if (response.ok) {
-        showToast('✅ Photo sauvegardée sur SharePoint !', 'success');
-        btn.textContent = '✅ Sauvegardé!';
-
-        // Notifier PowerApps (si intégré dans un iframe/WebView)
-        try {
-          window.parent.postMessage({ type: 'PHOTO_ANNOTEE_SAUVEGARDEE', fileName: outFileName, itemId }, '*');
-        } catch(e) {}
-
-        setTimeout(() => { btn.disabled = false; btn.textContent = '💾 Sauvegarder'; }, 3000);
-      } else {
-        const errText = await response.text();
-        console.error('Erreur Flow:', response.status, errText);
-        showToast('❌ Erreur lors de la sauvegarde (' + response.status + ')', 'error');
-        btn.disabled = false;
-        btn.textContent = '💾 Sauvegarder';
-      }
-
-    } catch (err) {
-      console.error('Erreur réseau:', err);
-      showToast('❌ Erreur réseau — vérifiez la connexion', 'error');
-      btn.disabled = false;
-      btn.textContent = '💾 Sauvegarder';
-    }
+    showToast('✅ Image sauvegardée : ' + baseName, 'success');
   }
 </script>
 </body>
