@@ -269,7 +269,6 @@
     <span id="status">Aucune image chargée</span>
     <span id="fileName"></span>
   </div>
-  <button class="tool-btn success" id="btnSend" onclick="sendImage()" style="padding:8px 20px;font-size:14px;" title="Envoyer l'image annotée vers Power Automate" disabled>📤 Envoyer</button>
 </div>
 
 <script>
@@ -346,7 +345,6 @@
       // Afficher le canvas, cacher le placeholder
       document.getElementById('placeholder').style.display = 'none';
       document.getElementById('canvas-wrapper').style.display = 'block';
-      document.getElementById('btnSend').disabled = false;
 
       saveHistory();
       setTool('select');
@@ -377,6 +375,9 @@
     canvas.on('mouse:down', onMouseDown);
     canvas.on('mouse:move', onMouseMove);
     canvas.on('mouse:up', onMouseUp);
+    canvas.on('object:added', scheduleAutoSend);
+    canvas.on('object:modified', scheduleAutoSend);
+    canvas.on('object:removed', scheduleAutoSend);
   }
 
   function onMouseDown(opt) {
@@ -655,18 +656,19 @@
     setTimeout(() => { toast.className = ''; }, 3500);
   }
 
-  // ─── ENVOYER L'IMAGE ANNOTÉE VERS L'AZURE FUNCTION ─────────────────────────
-  async function sendImage() {
-    if (!bgImage) {
-      showToast('Aucune image à envoyer', 'error');
-      return;
-    }
+  // ─── ENVOI AUTOMATIQUE — 3 secondes après la dernière annotation ────────────
+  let autoSendTimer = null;
 
-    const btn = document.getElementById('btnSend');
-    btn.disabled = true;
-    btn.textContent = '⏳ Envoi…';
+  function scheduleAutoSend() {
+    if (!bgImage) return;
+    clearTimeout(autoSendTimer);
+    document.getElementById('status').textContent = '⏳ Sauvegarde automatique dans 3s…';
+    autoSendTimer = setTimeout(autoSendImage, 3000);
+  }
 
-    // Désélectionner avant export
+  async function autoSendImage() {
+    if (!bgImage) return;
+
     canvas.discardActiveObject();
     canvas.renderAll();
 
@@ -681,13 +683,12 @@
 
       if (!response.ok) throw new Error('HTTP ' + response.status);
 
-      showToast('✅ Image envoyée avec succès !', 'success');
-      btn.textContent = '✅ Envoyé';
+      document.getElementById('status').textContent = '✅ Sauvegarde automatique effectuée';
+      showToast('✅ Image sauvegardée automatiquement', 'success');
 
     } catch (err) {
-      showToast('Erreur d\'envoi : ' + err.message, 'error');
-      btn.disabled = false;
-      btn.textContent = '📤 Envoyer';
+      document.getElementById('status').textContent = '⚠️ Erreur de sauvegarde';
+      showToast('Erreur de sauvegarde : ' + err.message, 'error');
     }
   }
 </script>
