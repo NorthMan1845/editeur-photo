@@ -185,10 +185,8 @@
 </head>
 <body>
 
-<!-- Toast -->
 <div id="toast"></div>
 
-<!-- Toolbar -->
 <div id="toolbar">
 
   <div class="tool-group">
@@ -237,13 +235,10 @@
     <button class="tool-btn" onclick="undo()" title="Annuler (Ctrl+Z)">↩ Annuler</button>
   </div>
 
-
 </div>
 
-<!-- Canvas -->
 <div id="canvas-container">
 
-  <!-- Placeholder affiché quand aucune image n'est chargée -->
   <div id="placeholder">
     <div class="open-hint" id="placeholderContent">
       <svg width="64" height="64" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5">
@@ -263,7 +258,6 @@
   </div>
 </div>
 
-<!-- Bottom bar -->
 <div id="bottombar">
   <div style="display:flex;gap:16px;align-items:center;">
     <span id="status">Aucune image chargée</span>
@@ -279,9 +273,9 @@
   let currentColor = '#ff0000';
   let currentStroke = 4;
 
-  // ─── ENDPOINTS AZURE FUNCTIONS (à remplacer par tes vraies URLs) ─────────────
-  const API_RECEIVE = '/api/receive'; // GET  → renvoie { image: "data:image/png;base64,..." }
-  const API_SEND    = '/api/send';    // POST → reçoit  { image: "data:image/png;base64,..." }
+  // ─── ENDPOINTS AZURE FUNCTIONS ──────────────────────────────────────────────
+  const API_RECEIVE = '/api/receive'; 
+  const API_SEND    = '/api/send';    
 
   // ─── INIT ────────────────────────────────────────────────────────────────────
   window.onload = function() {
@@ -293,7 +287,7 @@
     startPolling();
   };
 
-  // ─── POLLING — vérifie toutes les 3s si une image est disponible ────────────
+  // ─── POLLING ─────────────────────────────────────────────────────────────────
   let pollingInterval = null;
 
   function startPolling() {
@@ -313,7 +307,7 @@
         loadPhotoFromDataURL(data.image);
 
       } catch (err) {
-        // Erreur réseau silencieuse, on réessaie au prochain tick
+        // Erreur réseau silencieuse
       }
     }, 3000);
   }
@@ -343,7 +337,6 @@
       canvas.sendToBack(img);
       bgImage = img;
 
-      // Afficher le canvas, cacher le placeholder
       document.getElementById('placeholder').style.display = 'none';
       document.getElementById('canvas-wrapper').style.display = 'block';
 
@@ -376,13 +369,11 @@
     canvas.on('mouse:down', onMouseDown);
     canvas.on('mouse:move', onMouseMove);
     canvas.on('mouse:up', onMouseUp);
-
   }
 
   function onMouseDown(opt) {
     if (currentTool === 'select') return;
     if (currentTool === 'text') {
-      // Start drag to define text box size
       isDrawing = true;
       const p = canvas.getPointer(opt.e);
       startX = p.x; startY = p.y;
@@ -456,7 +447,7 @@
       canvas.remove(activeShape);
       activeShape = null;
 
-      if (w < 10 || h < 10) return; // too small, cancel
+      if (w < 10 || h < 10) return; 
 
       const fontSize = Math.max(12, Math.round(h * 0.6));
       const text = new fabric.IText('Texte ici', {
@@ -478,7 +469,8 @@
 
     if (activeShape) {
       if (currentTool === 'arrow') {
-        addArrowHead(activeShape);
+        const p = canvas.getPointer(opt.e);
+        addArrowHead(startX, startY, p.x, p.y);
       } else {
         activeShape.set({ selectable: true });
         saveHistory();
@@ -487,27 +479,25 @@
     }
   }
 
-  // ─── ARROW HEAD ─────────────────────────────────────────────────────────────
-  function addArrowHead(line) {
-    const x1 = line.x1 + line.left;
-    const y1 = line.y1 + line.top;
-    const x2 = line.x2 + line.left;
-    const y2 = line.y2 + line.top;
+  // ─── ARROW HEAD (CORRIGÉ) ───────────────────────────────────────────────────
+  function addArrowHead(x1, y1, x2, y2) {
+    // Supprime la ligne temporaire de tracking
+    if (activeShape) canvas.remove(activeShape);
 
     if (Math.abs(x2 - x1) < 3 && Math.abs(y2 - y1) < 3) {
-      canvas.remove(line);
-      return; // too short
+      return; // Trop court, on annule
     }
 
     const angle = Math.atan2(y2 - y1, x2 - x1);
     const size = Math.max(currentStroke * 4, 14);
 
-    canvas.remove(line);
-
+    // Crée le corps de la flèche
     const shaft = new fabric.Line([x1, y1, x2, y2], {
       stroke: currentColor, strokeWidth: currentStroke,
       selectable: false, evented: false
     });
+    
+    // Crée la pointe de la flèche au point d'arrivée (x2, y2)
     const head = new fabric.Triangle({
       left: x2, top: y2,
       originX: 'center', originY: 'center',
@@ -517,8 +507,16 @@
       selectable: false, evented: false
     });
 
-    const group = new fabric.Group([shaft, head], { selectable: true });
+    // Combine les deux éléments dans un groupe sans altérer leur position
+    const group = new fabric.Group([shaft, head], { 
+      selectable: true,
+      hasControls: true,
+      hasBorders: true
+    });
+    
     canvas.add(group);
+    canvas.setActiveObject(group);
+    canvas.renderAll();
     saveHistory();
   }
 
@@ -530,6 +528,7 @@
     saveHistory();
   }
 
+  // (Le reste des fonctions reste identique...)
   function flipV() {
     if (!bgImage) return;
     bgImage.set('flipY', !bgImage.flipY);
@@ -549,7 +548,6 @@
     saveHistory();
   }
 
-  // ─── ZOOM (anciennement Rogner) ──────────────────────────────────────────────
   let cropStartX, cropStartY, cropEndX, cropEndY;
   let isCropping = false;
 
@@ -602,12 +600,9 @@
 
     const canvasW = canvas.width;
     const canvasH = canvas.height;
-
-    // Scale factor to fill the canvas with the selected region
     const scaleX = canvasW / selW;
     const scaleY = canvasH / selH;
 
-    // Move and scale every object so the selected region fills the canvas
     canvas.getObjects().forEach(obj => {
       obj.set({
         left:  (obj.left  - selX) * scaleX,
@@ -623,7 +618,6 @@
     setTool('select');
   }
 
-  // ─── COLOR & STROKE ─────────────────────────────────────────────────────────
   function updateColor(val) {
     currentColor = val;
     const obj = canvas.getActiveObject();
@@ -643,7 +637,6 @@
     }
   }
 
-  // ─── DELETE ──────────────────────────────────────────────────────────────────
   function deleteSelected() {
     const obj = canvas.getActiveObject();
     if (obj && obj !== bgImage) {
@@ -653,9 +646,7 @@
     }
   }
 
-  // ─── HISTORY (undo) ──────────────────────────────────────────────────────────
   function saveHistory() {
-    // Truncate any future states beyond current position
     const state = JSON.stringify(canvas.toJSON(['selectable','evented','_isArrowLine','_isTextGuide']));
     history.push(state);
     if (history.length > 30) history.shift();
@@ -663,7 +654,7 @@
 
   function undo() {
     if (history.length <= 1) { showToast('Rien à annuler', ''); return; }
-    history.pop(); // discard current
+    history.pop(); 
     const prev = history[history.length - 1];
     canvas.loadFromJSON(JSON.parse(prev), () => {
       bgImage = null;
@@ -676,7 +667,6 @@
     });
   }
 
-  // ─── KEYBOARD SHORTCUTS ──────────────────────────────────────────────────────
   document.addEventListener('keydown', (e) => {
     if (e.key === 'Delete' || e.key === 'Backspace') {
       const active = canvas.getActiveObject();
@@ -685,7 +675,6 @@
     if (e.ctrlKey && e.key === 'z') undo();
   });
 
-  // ─── TOAST ──────────────────────────────────────────────────────────────────
   function showToast(message, type = '') {
     const toast = document.getElementById('toast');
     toast.textContent = message;
@@ -693,7 +682,6 @@
     setTimeout(() => { toast.className = ''; }, 3500);
   }
 
-  // ─── SAUVEGARDE MANUELLE ─────────────────────────────────────────────────────
   async function saveImage() {
     if (!bgImage) { showToast('Aucune image à sauvegarder', 'error'); return; }
 
