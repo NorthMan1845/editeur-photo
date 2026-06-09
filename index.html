@@ -238,6 +238,7 @@
     <button class="tool-btn danger" onclick="clearAnnotations()" title="Effacer toutes les annotations">🗑 Tout effacer</button>
   </div>
 
+
 </div>
 
 <!-- Canvas -->
@@ -269,6 +270,7 @@
     <span id="status">Aucune image chargée</span>
     <span id="fileName"></span>
   </div>
+  <button class="tool-btn success" onclick="saveImage()" title="Sauvegarder l'image">💾 Sauvegarder</button>
 </div>
 
 <script>
@@ -375,9 +377,7 @@
     canvas.on('mouse:down', onMouseDown);
     canvas.on('mouse:move', onMouseMove);
     canvas.on('mouse:up', onMouseUp);
-    canvas.on('object:added', scheduleAutoSend);
-    canvas.on('object:modified', scheduleAutoSend);
-    canvas.on('object:removed', scheduleAutoSend);
+
   }
 
   function onMouseDown(opt) {
@@ -656,23 +656,15 @@
     setTimeout(() => { toast.className = ''; }, 3500);
   }
 
-  // ─── ENVOI AUTOMATIQUE — 3 secondes après la dernière annotation ────────────
-  let autoSendTimer = null;
-
-  function scheduleAutoSend() {
-    if (!bgImage) return;
-    clearTimeout(autoSendTimer);
-    document.getElementById('status').textContent = '⏳ Sauvegarde automatique dans 3s…';
-    autoSendTimer = setTimeout(autoSendImage, 3000);
-  }
-
-  async function autoSendImage() {
-    if (!bgImage) return;
+  // ─── SAUVEGARDE MANUELLE ─────────────────────────────────────────────────────
+  async function saveImage() {
+    if (!bgImage) { showToast('Aucune image à sauvegarder', 'error'); return; }
 
     canvas.discardActiveObject();
     canvas.renderAll();
 
     const dataURL = canvas.toDataURL({ format: 'png', quality: 1 });
+    document.getElementById('status').textContent = '⏳ Sauvegarde en cours…';
 
     try {
       const response = await fetch(API_SEND, {
@@ -683,8 +675,8 @@
 
       if (!response.ok) throw new Error('HTTP ' + response.status);
 
-      document.getElementById('status').textContent = '✅ Sauvegarde automatique effectuée';
-      showToast('✅ Image sauvegardée automatiquement', 'success');
+      document.getElementById('status').textContent = '✅ Image sauvegardée';
+      showToast('✅ Image sauvegardée', 'success');
 
     } catch (err) {
       document.getElementById('status').textContent = '⚠️ Erreur de sauvegarde';
