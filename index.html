@@ -442,7 +442,6 @@
     canvas.renderAll();
   }
 
-  // Le bloc ci-dessous a été modifié pour retirer le backgroundColor gris
   function onMouseUp(opt) {
     if (!isDrawing) return;
     isDrawing = false;
@@ -642,11 +641,19 @@
     }
   }
 
-  // ─── ACTIONS & HISTORY ───────────────────────────────────────────────────────
+  // ─── ACTIONS & HISTORY (CORRIGÉ POUR SUPPRESSION FLUIDE) ──────────────────────
   function deleteSelected() {
     const obj = canvas.getActiveObject();
     if (obj && obj !== bgImage) {
-      canvas.remove(obj);
+      // Gestion des sélections de plusieurs éléments à la fois
+      if (obj.type === 'activeSelection') {
+        obj.forEachObject(o => canvas.remove(o));
+      } else {
+        canvas.remove(obj);
+      }
+      
+      // Essentiel : vider la sélection active pour réinitialiser l'état de Fabric.js
+      canvas.discardActiveObject(); 
       canvas.renderAll();
       saveHistory();
     }
@@ -673,12 +680,23 @@
     });
   }
 
+  // Écouteur clavier corrigé pour inclure toutes les formes et exclure le texte en cours d'édition
   document.addEventListener('keydown', (e) => {
+    const active = canvas.getActiveObject();
+    
+    // Si l'utilisateur est en train de taper du texte dans un bloc, on le laisse faire !
+    if (active && active.isEditing) return;
+
     if (e.key === 'Delete' || e.key === 'Backspace') {
-      const active = canvas.getActiveObject();
-      if (active && active.type !== 'i-text') deleteSelected();
+      if (active) {
+        deleteSelected();
+        e.preventDefault(); // Évite les retours en arrière de page intempestifs du navigateur
+      }
     }
-    if (e.ctrlKey && e.key === 'z') undo();
+    if (e.ctrlKey && e.key === 'z') {
+      undo();
+      e.preventDefault();
+    }
   });
 
   function showToast(message, type = '') {
