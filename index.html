@@ -515,7 +515,7 @@
     });
     
     canvas.add(group);
-    canvas.setActiveObject(group);
+    // Ligne supprimée ici pour éviter l'activation immédiate des contrôles
     canvas.renderAll();
     saveHistory();
   }
@@ -528,7 +528,6 @@
     saveHistory();
   }
 
-  // (Le reste des fonctions reste identique...)
   function flipV() {
     if (!bgImage) return;
     bgImage.set('flipY', !bgImage.flipY);
