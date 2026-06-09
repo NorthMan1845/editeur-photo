@@ -542,12 +542,35 @@
 
   function rotateImg(deg) {
     if (!bgImage) return;
-    const currentAngle = bgImage.angle || 0;
-    bgImage.set({ angle: currentAngle + deg, originX: 'center', originY: 'center', left: canvas.width/2, top: canvas.height/2 });
-    const w = canvas.width, h = canvas.height;
-    canvas.setWidth(h);
-    canvas.setHeight(w);
-    bgImage.set({ scaleX: bgImage.scaleY, scaleY: bgImage.scaleX });
+
+    // 1. Sauvegarde des dimensions actuelles (avant inversion)
+    const oldW = canvas.width;
+    const oldH = canvas.height;
+
+    // 2. Inversion des dimensions du canvas
+    canvas.setWidth(oldH);
+    canvas.setHeight(oldW);
+
+    // 3. Rotation et repositionnement de TOUS les objets du canvas
+    canvas.getObjects().forEach(obj => {
+      const oldLeft = obj.left;
+      const oldTop = obj.top;
+      const oldAngle = obj.angle || 0;
+
+      // Recalcul de la position par rapport au pivotement global
+      const newLeft = oldH - oldTop;
+      const newTop = oldLeft;
+
+      obj.set({
+        angle: (oldAngle + deg) % 360,
+        left: newLeft,
+        top: newTop
+      });
+
+      // Recalcule le masque de sélection Fabric pour éviter les décalages de clic
+      obj.setCoords();
+    });
+
     canvas.renderAll();
     saveHistory();
   }
@@ -641,19 +664,11 @@
     }
   }
 
-  // ─── ACTIONS & HISTORY (CORRIGÉ POUR SUPPRESSION FLUIDE) ──────────────────────
+  // ─── ACTIONS & HISTORY ───────────────────────────────────────────────────────
   function deleteSelected() {
     const obj = canvas.getActiveObject();
     if (obj && obj !== bgImage) {
-      // Gestion des sélections de plusieurs éléments à la fois
-      if (obj.type === 'activeSelection') {
-        obj.forEachObject(o => canvas.remove(o));
-      } else {
-        canvas.remove(obj);
-      }
-      
-      // Essentiel : vider la sélection active pour réinitialiser l'état de Fabric.js
-      canvas.discardActiveObject(); 
+      canvas.remove(obj);
       canvas.renderAll();
       saveHistory();
     }
@@ -680,23 +695,12 @@
     });
   }
 
-  // Écouteur clavier corrigé pour inclure toutes les formes et exclure le texte en cours d'édition
   document.addEventListener('keydown', (e) => {
-    const active = canvas.getActiveObject();
-    
-    // Si l'utilisateur est en train de taper du texte dans un bloc, on le laisse faire !
-    if (active && active.isEditing) return;
-
     if (e.key === 'Delete' || e.key === 'Backspace') {
-      if (active) {
-        deleteSelected();
-        e.preventDefault(); // Évite les retours en arrière de page intempestifs du navigateur
-      }
+      const active = canvas.getActiveObject();
+      if (active && active.type !== 'i-text') deleteSelected();
     }
-    if (e.ctrlKey && e.key === 'z') {
-      undo();
-      e.preventDefault();
-    }
+    if (e.ctrlKey && e.key === 'z') undo();
   });
 
   function showToast(message, type = '') {
