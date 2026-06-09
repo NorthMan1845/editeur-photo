@@ -273,7 +273,6 @@
   let currentColor = '#ff0000';
   let currentStroke = 4;
 
-  // ─── ENDPOINTS AZURE FUNCTIONS ──────────────────────────────────────────────
   const API_RECEIVE = '/api/receive'; 
   const API_SEND    = '/api/send';    
 
@@ -332,7 +331,8 @@
 
       img.set({ scaleX: scale, scaleY: scale, left: 0, top: 0,
                 selectable: false, evented: false,
-                originX: 'left', originY: 'top' });
+                originX: 'left', originY: 'top',
+                _isBackground: true });
       canvas.add(img);
       canvas.sendToBack(img);
       bgImage = img;
@@ -346,12 +346,19 @@
     });
   }
 
-  // ─── TOOL MANAGEMENT ────────────────────────────────────────────────────────
+  // ─── TOOL MANAGEMENT (UNIFIÉ) ────────────────────────────────────────────────
   function setTool(tool) {
     currentTool = tool;
     canvas.isDrawingMode = false;
     canvas.selection = (tool === 'select');
-    canvas.forEachObject(o => { if (o !== bgImage) o.selectable = (tool === 'select'); });
+    
+    // Active ou désactive l'interaction physique globale selon le mode sélectionné
+    canvas.forEachObject(o => { 
+      if (o !== bgImage) {
+        o.selectable = (tool === 'select'); 
+        o.evented = (tool === 'select'); 
+      }
+    });
 
     document.querySelectorAll('.tool-btn[id^="btn-"]').forEach(b => b.classList.remove('active'));
     const btn = document.getElementById('btn-' + tool);
@@ -395,23 +402,23 @@
       activeShape = new fabric.Rect({
         left: startX, top: startY, width: 0, height: 0,
         fill: 'transparent', stroke: currentColor, strokeWidth: currentStroke,
-        selectable: false
+        selectable: false, evented: false
       });
     } else if (currentTool === 'circle') {
       activeShape = new fabric.Ellipse({
         left: startX, top: startY, rx: 0, ry: 0,
         fill: 'transparent', stroke: currentColor, strokeWidth: currentStroke,
-        selectable: false
+        selectable: false, evented: false
       });
     } else if (currentTool === 'line') {
       activeShape = new fabric.Line([startX, startY, startX, startY], {
         stroke: currentColor, strokeWidth: currentStroke,
-        selectable: false
+        selectable: false, evented: false
       });
     } else if (currentTool === 'arrow') {
       activeShape = new fabric.Line([startX, startY, startX, startY], {
         stroke: currentColor, strokeWidth: currentStroke,
-        selectable: false, _isArrowLine: true
+        selectable: false, evented: false, _isArrowLine: true
       });
     }
 
@@ -472,32 +479,33 @@
         const p = canvas.getPointer(opt.e);
         addArrowHead(startX, startY, p.x, p.y);
       } else {
-        activeShape.set({ selectable: true });
+        // Reste cohérent avec l'état de l'outil sélectionné (bloqué si on est en train de dessiner)
+        activeShape.set({ 
+          selectable: (currentTool === 'select'),
+          evented: (currentTool === 'select')
+        });
         saveHistory();
       }
       activeShape = null;
     }
   }
 
-  // ─── ARROW HEAD (CORRIGÉ) ───────────────────────────────────────────────────
+  // ─── ARROW HEAD (CORRIGÉ & UNIFIÉ) ───────────────────────────────────────────
   function addArrowHead(x1, y1, x2, y2) {
-    // Supprime la ligne temporaire de tracking
     if (activeShape) canvas.remove(activeShape);
 
     if (Math.abs(x2 - x1) < 3 && Math.abs(y2 - y1) < 3) {
-      return; // Trop court, on annule
+      return; 
     }
 
     const angle = Math.atan2(y2 - y1, x2 - x1);
     const size = Math.max(currentStroke * 4, 14);
 
-    // Crée le corps de la flèche
     const shaft = new fabric.Line([x1, y1, x2, y2], {
       stroke: currentColor, strokeWidth: currentStroke,
       selectable: false, evented: false
     });
     
-    // Crée la pointe de la flèche au point d'arrivée (x2, y2)
     const head = new fabric.Triangle({
       left: x2, top: y2,
       originX: 'center', originY: 'center',
@@ -507,15 +515,15 @@
       selectable: false, evented: false
     });
 
-    // Combine les deux éléments dans un groupe sans altérer leur position
+    // Le groupe adopte dynamiquement le comportement d'une ligne ou d'un rectangle
     const group = new fabric.Group([shaft, head], { 
-      selectable: true,
+      selectable: (currentTool === 'select'),
+      evented: (currentTool === 'select'),
       hasControls: true,
       hasBorders: true
     });
     
     canvas.add(group);
-    // Ligne supprimée ici pour éviter l'activation immédiate des contrôles
     canvas.renderAll();
     saveHistory();
   }
@@ -636,6 +644,7 @@
     }
   }
 
+  // ─── ACTIONS & HISTORY ───────────────────────────────────────────────────────
   function deleteSelected() {
     const obj = canvas.getActiveObject();
     if (obj && obj !== bgImage) {
@@ -646,7 +655,7 @@
   }
 
   function saveHistory() {
-    const state = JSON.stringify(canvas.toJSON(['selectable','evented','_isArrowLine','_isTextGuide']));
+    const state = JSON.stringify(canvas.toJSON(['selectable','evented','_isArrowLine','_isTextGuide','_isBackground']));
     history.push(state);
     if (history.length > 30) history.shift();
   }
@@ -658,7 +667,7 @@
     canvas.loadFromJSON(JSON.parse(prev), () => {
       bgImage = null;
       canvas.getObjects().forEach(o => {
-        if (o.selectable === false && o.evented === false) {
+        if (o._isBackground) {
           bgImage = o;
         }
       });
