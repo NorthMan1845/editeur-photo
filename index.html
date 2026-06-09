@@ -212,7 +212,7 @@
 
   <div class="tool-group">
     <span style="font-size:12px;color:#6c7086;margin-right:4px;">Image</span>
-    <button class="tool-btn" id="btn-crop" onclick="startCrop()" title="Rogner la photo">✂ Rogner</button>
+    <button class="tool-btn" id="btn-crop" onclick="startCrop()" title="Zoomer sur une zone">🔍 Zoom</button>
     <button class="tool-btn" onclick="flipH()" title="Miroir horizontal">↔ Flip H</button>
     <button class="tool-btn" onclick="flipV()" title="Miroir vertical">↕ Flip V</button>
     <button class="tool-btn" onclick="rotateImg(90)" title="Rotation 90°">↻ 90°</button>
@@ -234,8 +234,7 @@
   </div>
 
   <div class="tool-group">
-    <button class="tool-btn" onclick="undo()" title="Annuler">↩ Annuler</button>
-    <button class="tool-btn danger" onclick="clearAnnotations()" title="Effacer toutes les annotations">🗑 Tout effacer</button>
+    <button class="tool-btn" onclick="undo()" title="Annuler (Ctrl+Z)">↩ Annuler</button>
   </div>
 
 
@@ -382,7 +381,20 @@
 
   function onMouseDown(opt) {
     if (currentTool === 'select') return;
-    if (currentTool === 'text') { addText(opt); return; }
+    if (currentTool === 'text') {
+      // Start drag to define text box size
+      isDrawing = true;
+      const p = canvas.getPointer(opt.e);
+      startX = p.x; startY = p.y;
+      activeShape = new fabric.Rect({
+        left: startX, top: startY, width: 0, height: 0,
+        fill: 'rgba(137,180,250,0.1)', stroke: '#89b4fa',
+        strokeWidth: 1, strokeDashArray: [4, 4],
+        selectable: false, evented: false, _isTextGuide: true
+      });
+      canvas.add(activeShape);
+      return;
+    }
 
     isDrawing = true;
     const p = canvas.getPointer(opt.e);
@@ -419,7 +431,7 @@
     if (!isDrawing || !activeShape) return;
     const p = canvas.getPointer(opt.e);
 
-    if (currentTool === 'rect') {
+    if (currentTool === 'rect' || currentTool === 'text') {
       const w = p.x - startX, h = p.y - startY;
       activeShape.set({ width: Math.abs(w), height: Math.abs(h), left: w < 0 ? p.x : startX, top: h < 0 ? p.y : startY });
     } else if (currentTool === 'circle') {
@@ -436,53 +448,77 @@
     if (!isDrawing) return;
     isDrawing = false;
 
-    if (activeShape) {
-      if (currentTool === 'arrow') addArrowHead(activeShape);
-      activeShape.set({ selectable: true });
+    if (currentTool === 'text' && activeShape) {
+      const left = activeShape.left;
+      const top = activeShape.top;
+      const w = activeShape.width;
+      const h = activeShape.height;
+      canvas.remove(activeShape);
       activeShape = null;
+
+      if (w < 10 || h < 10) return; // too small, cancel
+
+      const fontSize = Math.max(12, Math.round(h * 0.6));
+      const text = new fabric.IText('Texte ici', {
+        left, top,
+        width: w,
+        fontSize, fill: currentColor,
+        fontFamily: 'Segoe UI',
+        backgroundColor: 'rgba(0,0,0,0.4)',
+        padding: 4,
+        selectable: true
+      });
+      canvas.add(text);
+      canvas.setActiveObject(text);
+      text.enterEditing();
+      text.selectAll();
       saveHistory();
+      return;
+    }
+
+    if (activeShape) {
+      if (currentTool === 'arrow') {
+        addArrowHead(activeShape);
+      } else {
+        activeShape.set({ selectable: true });
+        saveHistory();
+      }
+      activeShape = null;
     }
   }
 
   // ─── ARROW HEAD ─────────────────────────────────────────────────────────────
   function addArrowHead(line) {
-    const x1 = line.x1 + line.left, y1 = line.y1 + line.top;
-    const x2 = line.x2 + line.left, y2 = line.y2 + line.top;
+    const x1 = line.x1 + line.left;
+    const y1 = line.y1 + line.top;
+    const x2 = line.x2 + line.left;
+    const y2 = line.y2 + line.top;
+
+    if (Math.abs(x2 - x1) < 3 && Math.abs(y2 - y1) < 3) {
+      canvas.remove(line);
+      return; // too short
+    }
+
     const angle = Math.atan2(y2 - y1, x2 - x1);
     const size = Math.max(currentStroke * 4, 14);
 
-    const arrowHead = new fabric.Triangle({
+    canvas.remove(line);
+
+    const shaft = new fabric.Line([x1, y1, x2, y2], {
+      stroke: currentColor, strokeWidth: currentStroke,
+      selectable: false, evented: false
+    });
+    const head = new fabric.Triangle({
       left: x2, top: y2,
       originX: 'center', originY: 'center',
       angle: (angle * 180 / Math.PI) + 90,
       width: size, height: size,
       fill: currentColor, stroke: currentColor,
-      selectable: true
+      selectable: false, evented: false
     });
 
-    canvas.add(arrowHead);
-    canvas.remove(line);
-    const group = new fabric.Group([
-      new fabric.Line([x1, y1, x2, y2], { stroke: currentColor, strokeWidth: currentStroke }),
-      arrowHead
-    ], { selectable: true });
+    const group = new fabric.Group([shaft, head], { selectable: true });
     canvas.add(group);
-  }
-
-  // ─── TEXT ────────────────────────────────────────────────────────────────────
-  function addText(opt) {
-    const p = canvas.getPointer(opt.e);
-    const text = new fabric.IText('Texte ici', {
-      left: p.x, top: p.y,
-      fontSize: 20, fill: currentColor,
-      fontFamily: 'Segoe UI',
-      backgroundColor: 'rgba(0,0,0,0.4)',
-      padding: 4,
-      selectable: true
-    });
-    canvas.add(text);
-    canvas.setActiveObject(text);
-    text.enterEditing();
     saveHistory();
   }
 
@@ -513,12 +549,12 @@
     saveHistory();
   }
 
-  // ─── CROP ────────────────────────────────────────────────────────────────────
+  // ─── ZOOM (anciennement Rogner) ──────────────────────────────────────────────
   let cropStartX, cropStartY, cropEndX, cropEndY;
   let isCropping = false;
 
   function startCrop() {
-    if (!bgImage) { showToast('Ouvrez d\'abord une image', 'error'); return; }
+    if (!bgImage) { showToast('Aucune image disponible', 'error'); return; }
     setTool('crop');
     const overlay = document.getElementById('cropOverlay');
     const cropRect = document.getElementById('cropRect');
@@ -542,12 +578,10 @@
       cropEndY = e.clientY - rect.top;
       const x = Math.min(cropStartX, cropEndX);
       const y = Math.min(cropStartY, cropEndY);
-      const w = Math.abs(cropEndX - cropStartX);
-      const h = Math.abs(cropEndY - cropStartY);
       cropRect.style.left = x + 'px';
       cropRect.style.top = y + 'px';
-      cropRect.style.width = w + 'px';
-      cropRect.style.height = h + 'px';
+      cropRect.style.width = Math.abs(cropEndX - cropStartX) + 'px';
+      cropRect.style.height = Math.abs(cropEndY - cropStartY) + 'px';
     };
 
     overlay.onmouseup = () => {
@@ -555,31 +589,37 @@
       overlay.style.display = 'none';
       cropRect.style.width = '0';
       cropRect.style.height = '0';
-      applyCrop();
+      applyZoom();
     };
   }
 
-  function applyCrop() {
-    const x = Math.min(cropStartX, cropEndX);
-    const y = Math.min(cropStartY, cropEndY);
-    const w = Math.abs(cropEndX - cropStartX);
-    const h = Math.abs(cropEndY - cropStartY);
-    if (w < 10 || h < 10) { setTool('select'); return; }
+  function applyZoom() {
+    const selX = Math.min(cropStartX, cropEndX);
+    const selY = Math.min(cropStartY, cropEndY);
+    const selW = Math.abs(cropEndX - cropStartX);
+    const selH = Math.abs(cropEndY - cropStartY);
+    if (selW < 10 || selH < 10) { setTool('select'); return; }
 
-    const dataURL = canvas.toDataURL({ left: x, top: y, width: w, height: h, format: 'png' });
+    const canvasW = canvas.width;
+    const canvasH = canvas.height;
 
-    fabric.Image.fromURL(dataURL, function(img) {
-      canvas.clear();
-      canvas.setWidth(w);
-      canvas.setHeight(h);
-      img.set({ left: 0, top: 0, selectable: false, evented: false });
-      canvas.add(img);
-      canvas.sendToBack(img);
-      bgImage = img;
-      canvas.renderAll();
-      saveHistory();
+    // Scale factor to fill the canvas with the selected region
+    const scaleX = canvasW / selW;
+    const scaleY = canvasH / selH;
+
+    // Move and scale every object so the selected region fills the canvas
+    canvas.getObjects().forEach(obj => {
+      obj.set({
+        left:  (obj.left  - selX) * scaleX,
+        top:   (obj.top   - selY) * scaleY,
+        scaleX: (obj.scaleX || 1) * scaleX,
+        scaleY: (obj.scaleY || 1) * scaleY,
+      });
+      obj.setCoords();
     });
 
+    canvas.renderAll();
+    saveHistory();
     setTool('select');
   }
 
@@ -613,27 +653,24 @@
     }
   }
 
-  function clearAnnotations() {
-    if (!bgImage) return;
-    if (!confirm('Effacer toutes les annotations?')) return;
-    canvas.getObjects().forEach(o => { if (o !== bgImage) canvas.remove(o); });
-    canvas.renderAll();
-    saveHistory();
-  }
-
   // ─── HISTORY (undo) ──────────────────────────────────────────────────────────
   function saveHistory() {
-    history.push(JSON.stringify(canvas.toJSON(['selectable','evented','_isArrowLine'])));
-    if (history.length > 20) history.shift();
+    // Truncate any future states beyond current position
+    const state = JSON.stringify(canvas.toJSON(['selectable','evented','_isArrowLine','_isTextGuide']));
+    history.push(state);
+    if (history.length > 30) history.shift();
   }
 
   function undo() {
-    if (history.length <= 1) return;
-    history.pop();
+    if (history.length <= 1) { showToast('Rien à annuler', ''); return; }
+    history.pop(); // discard current
     const prev = history[history.length - 1];
-    canvas.loadFromJSON(prev, () => {
+    canvas.loadFromJSON(JSON.parse(prev), () => {
+      bgImage = null;
       canvas.getObjects().forEach(o => {
-        if (!o.selectable) { o.evented = false; bgImage = o; }
+        if (o.selectable === false && o.evented === false) {
+          bgImage = o;
+        }
       });
       canvas.renderAll();
     });
