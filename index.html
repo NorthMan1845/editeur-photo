@@ -442,6 +442,7 @@
     canvas.renderAll();
   }
 
+  // Le bloc ci-dessous a été modifié pour retirer le backgroundColor gris
   function onMouseUp(opt) {
     if (!isDrawing) return;
     isDrawing = false;
@@ -462,7 +463,6 @@
         width: w,
         fontSize, fill: currentColor,
         fontFamily: 'Segoe UI',
-        backgroundColor: 'rgba(0,0,0,0.4)',
         padding: 4,
         selectable: true
       });
@@ -479,7 +479,6 @@
         const p = canvas.getPointer(opt.e);
         addArrowHead(startX, startY, p.x, p.y);
       } else {
-        // Reste cohérent avec l'état de l'outil sélectionné (bloqué si on est en train de dessiner)
         activeShape.set({ 
           selectable: (currentTool === 'select'),
           evented: (currentTool === 'select')
@@ -515,7 +514,6 @@
       selectable: false, evented: false
     });
 
-    // Le groupe adopte dynamiquement le comportement d'une ligne ou d'un rectangle
     const group = new fabric.Group([shaft, head], { 
       selectable: (currentTool === 'select'),
       evented: (currentTool === 'select'),
