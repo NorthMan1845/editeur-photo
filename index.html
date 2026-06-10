@@ -144,6 +144,7 @@
 
   /* ── CANVAS AREA ── */
   #canvas-container {
+    position: relative;
     flex: 1;
     overflow: auto;
     display: flex;
@@ -212,12 +213,12 @@
     white-space: nowrap;
   }
 
-  /* ── Crop overlay ── */
+  /* ── Crop overlay (Couvre maintenant TOUT le conteneur pour capter les clics extérieurs) ── */
   #cropOverlay {
     display: none;
     position: absolute;
     top: 0; left: 0;
-    background: rgba(0,0,0,0.35);
+    background: rgba(0,0,0,0.25);
     width: 100%; height: 100%;
     cursor: crosshair;
     z-index: 10;
@@ -225,7 +226,7 @@
   #cropRect {
     position: absolute;
     border: 2px dashed var(--pa-blue);
-    background: rgba(0,120,212,0.08);
+    background: rgba(0,120,212,0.12);
     pointer-events: none;
   }
 
@@ -331,9 +332,10 @@
 
   <div id="canvas-wrapper">
     <canvas id="mainCanvas"></canvas>
-    <div id="cropOverlay">
-      <div id="cropRect"></div>
-    </div>
+  </div>
+
+  <div id="cropOverlay">
+    <div id="cropRect"></div>
   </div>
 </div>
 
@@ -657,52 +659,114 @@
   let cropStartX, cropStartY, cropEndX, cropEndY;
   let isCropping = false;
 
+  // ─── ROGNAGE AMÉLIORÉ ET SÉCURISÉ ───────────────────────────────────────────
   function startCrop() {
     if (!bgImage) { showToast('Aucune image disponible', 'error'); return; }
     setTool('crop');
+    
     const overlay = document.getElementById('cropOverlay');
     const cropRect = document.getElementById('cropRect');
+    const canvasEl = document.getElementById('mainCanvas');
+    
     overlay.style.display = 'block';
 
+    // Fonction utilitaire pour récupérer et borner les coordonnées dans le canvas actuel
+    function getCanvasCoordinates(clientX, clientY) {
+      const rect = canvasEl.getBoundingClientRect();
+      
+      // Calcule la position relative par rapport au canvas physique
+      let x = clientX - rect.left;
+      let y = clientY - rect.top;
+      
+      // Contrainte (Clamp) pour ne jamais déborder des limites physiques réelles du canvas
+      x = Math.max(0, Math.min(x, rect.width));
+      y = Math.max(0, Math.min(y, rect.height));
+      
+      return { x, y };
+    }
+
+    // Gestion du clic initial (n'importe où sur l'overlay, dedans ou dehors du canvas)
     overlay.onmousedown = (e) => {
       isCropping = true;
-      const rect = overlay.getBoundingClientRect();
-      cropStartX = e.clientX - rect.left;
-      cropStartY = e.clientY - rect.top;
-      cropRect.style.left = cropStartX + 'px';
-      cropRect.style.top = cropStartY + 'px';
+      
+      const coords = getCanvasCoordinates(e.clientX, e.clientY);
+      cropStartX = coords.x;
+      cropStartY = coords.y;
+      
+      // Positionnement initial du rectangle visuel d'aide
+      const containerRect = overlay.getBoundingClientRect();
+      const localX = e.clientX - containerRect.left;
+      const localY = e.clientY - containerRect.top;
+      
+      cropRect.style.left = localX + 'px';
+      cropRect.style.top = localY + 'px';
       cropRect.style.width = '0';
       cropRect.style.height = '0';
     };
 
-    overlay.onmousemove = (e) => {
+    // Événement global mis sur WINDOW pour continuer le tracé même si on sort de la fenêtre
+    window.onmousemove = (e) => {
       if (!isCropping) return;
-      const rect = overlay.getBoundingClientRect();
-      cropEndX = e.clientX - rect.left;
-      cropEndY = e.clientY - rect.top;
-      const x = Math.min(cropStartX, cropEndX);
-      const y = Math.min(cropStartY, cropEndY);
-      cropRect.style.left = x + 'px';
-      cropRect.style.top = y + 'px';
-      cropRect.style.width = Math.abs(cropEndX - cropStartX) + 'px';
-      cropRect.style.height = Math.abs(cropEndY - cropStartY) + 'px';
+      
+      const coords = getCanvasCoordinates(e.clientX, e.clientY);
+      cropEndX = coords.x;
+      cropEndY = coords.y;
+      
+      // Met à jour visuellement le rectangle pointillé bleu sur l'overlay
+      const containerRect = overlay.getBoundingClientRect();
+      const canvasRect = canvasEl.getBoundingClientRect();
+      
+      // Calcule le tracé visuel par rapport à la div overlay globale
+      const currentVisualStartX = cropStartX + (canvasRect.left - containerRect.left);
+      const currentVisualStartY = cropStartY + (canvasRect.top - containerRect.top);
+      const currentVisualEndX = cropEndX + (canvasRect.left - containerRect.left);
+      const currentVisualEndY = cropEndY + (canvasRect.top - containerRect.top);
+      
+      const left = Math.min(currentVisualStartX, currentVisualEndX);
+      const top = Math.min(currentVisualStartY, currentVisualEndY);
+      const width = Math.abs(currentVisualEndX - currentVisualStartX);
+      const height = Math.abs(currentVisualEndY - currentVisualStartY);
+      
+      cropRect.style.left = left + 'px';
+      cropRect.style.top = top + 'px';
+      cropRect.style.width = width + 'px';
+      cropRect.style.height = height + 'px';
     };
 
-    overlay.onmouseup = () => {
+    // Relâchement global de la souris
+    window.onmouseup = () => {
+      if (!isCropping) return;
       isCropping = false;
+      
       overlay.style.display = 'none';
       cropRect.style.width = '0';
       cropRect.style.height = '0';
+      
+      // Nettoie les écouteurs globaux temporaires
+      window.onmousemove = null;
+      window.onmouseup = null;
+      
       applyZoom();
     };
   }
 
   function applyZoom() {
+    // Si les coordonnées de début et fin sont identiques ou non définies
+    if (cropStartX === undefined || cropEndX === undefined) { setTool('select'); return; }
+
     const selX = Math.min(cropStartX, cropEndX);
     const selY = Math.min(cropStartY, cropEndY);
-    const selW = Math.abs(cropEndX - cropStartX);
-    const selH = Math.abs(cropEndY - cropStartY);
-    if (selW < 10 || selH < 10) { setTool('select'); return; }
+    let selW = Math.abs(cropEndX - cropStartX);
+    let selH = Math.abs(cropEndY - cropStartY);
+    
+    // Si la zone sélectionnée est minuscule ou nulle, on considère que l'utilisateur 
+    // a cliqué à côté ou veut réinitialiser : on sélectionne automatiquement tout le canvas.
+    if (selW < 10 || selH < 10) {
+      selW = canvas.width;
+      selH = canvas.height;
+      setTool('select');
+      return;
+    }
 
     const canvasW = canvas.width;
     const canvasH = canvas.height;
