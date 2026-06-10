@@ -8,87 +8,149 @@
 <style>
   * { margin: 0; padding: 0; box-sizing: border-box; }
 
+  /* ── POWERAPPS / FLUENT UI THEME ── */
+  :root {
+    --pa-blue:        #0078D4;
+    --pa-blue-dark:   #005A9E;
+    --pa-blue-light:  #DEECF9;
+    --pa-white:       #FFFFFF;
+    --pa-bg:          #F3F2F1;
+    --pa-surface:     #FFFFFF;
+    --pa-border:      #EDEBE9;
+    --pa-border-dark: #C8C6C4;
+    --pa-text:        #201F1E;
+    --pa-text-muted:  #605E5C;
+    --pa-text-subtle: #A19F9D;
+    --pa-danger:      #A4262C;
+    --pa-danger-bg:   #FDE7E9;
+    --pa-success:     #107C10;
+    --pa-success-bg:  #DFF6DD;
+    --pa-header-bg:   #243A5E;
+  }
+
   body {
-    font-family: 'Segoe UI', sans-serif;
-    background: #1e1e2e;
-    color: #cdd6f4;
+    font-family: 'Segoe UI', 'Segoe UI Variable', system-ui, sans-serif;
+    background: var(--pa-bg);
+    color: var(--pa-text);
     height: 100vh;
     display: flex;
     flex-direction: column;
     overflow: hidden;
+    font-size: 13px;
   }
 
-  /* TOOLBAR */
+  /* ── TOOLBAR ── */
   #toolbar {
-    background: #181825;
-    border-bottom: 1px solid #313244;
-    padding: 8px 12px;
+    background: var(--pa-surface);
+    border-bottom: 1px solid var(--pa-border);
+    padding: 6px 12px;
     display: flex;
     align-items: center;
-    gap: 6px;
+    gap: 4px;
     flex-wrap: wrap;
     flex-shrink: 0;
+    min-height: 44px;
   }
 
   .tool-group {
     display: flex;
     align-items: center;
-    gap: 4px;
-    padding: 0 6px;
-    border-right: 1px solid #313244;
+    gap: 2px;
+    padding: 0 8px;
+    border-right: 1px solid var(--pa-border);
   }
   .tool-group:last-child { border-right: none; }
 
+  .tool-group-label {
+    font-size: 11px;
+    color: var(--pa-text-subtle);
+    margin-right: 4px;
+    font-weight: 400;
+    letter-spacing: 0.02em;
+    text-transform: uppercase;
+  }
+
   .tool-btn {
-    background: #313244;
-    border: 1px solid #45475a;
-    color: #cdd6f4;
-    border-radius: 6px;
-    padding: 6px 10px;
+    background: transparent;
+    border: 1px solid transparent;
+    color: var(--pa-text);
+    border-radius: 4px;
+    padding: 5px 10px;
     cursor: pointer;
     font-size: 13px;
+    font-family: inherit;
     display: flex;
     align-items: center;
     gap: 5px;
-    transition: all 0.15s;
+    transition: background 0.1s, border-color 0.1s, color 0.1s;
     white-space: nowrap;
+    height: 32px;
   }
-  .tool-btn:hover { background: #45475a; border-color: #89b4fa; }
-  .tool-btn.active { background: #89b4fa; color: #1e1e2e; border-color: #89b4fa; font-weight: 600; }
-  .tool-btn.danger:hover { background: #f38ba8; border-color: #f38ba8; color: #1e1e2e; }
-  .tool-btn.success { background: #a6e3a1; color: #1e1e2e; border-color: #a6e3a1; font-weight: 600; }
-  .tool-btn.success:hover { background: #94d494; border-color: #94d494; }
-  .tool-btn:disabled { opacity: 0.4; cursor: not-allowed; }
+  .tool-btn:hover {
+    background: var(--pa-blue-light);
+    border-color: var(--pa-border-dark);
+    color: var(--pa-blue-dark);
+  }
+  .tool-btn.active {
+    background: var(--pa-blue);
+    color: var(--pa-white);
+    border-color: var(--pa-blue);
+    font-weight: 600;
+  }
+  .tool-btn.active:hover {
+    background: var(--pa-blue-dark);
+    border-color: var(--pa-blue-dark);
+  }
+  .tool-btn.danger:hover {
+    background: var(--pa-danger-bg);
+    border-color: var(--pa-danger);
+    color: var(--pa-danger);
+  }
+  .tool-btn.success {
+    background: var(--pa-blue);
+    color: var(--pa-white);
+    border-color: var(--pa-blue);
+    font-weight: 600;
+  }
+  .tool-btn.success:hover {
+    background: var(--pa-blue-dark);
+    border-color: var(--pa-blue-dark);
+  }
+  .tool-btn:disabled { opacity: 0.38; cursor: not-allowed; }
 
   #colorPicker {
-    width: 32px; height: 32px;
-    border: 2px solid #45475a;
-    border-radius: 6px;
+    width: 32px;
+    height: 32px;
+    border: 1px solid var(--pa-border-dark);
+    border-radius: 4px;
     cursor: pointer;
     padding: 2px;
-    background: #313244;
+    background: var(--pa-white);
   }
 
   select {
-    background: #313244;
-    border: 1px solid #45475a;
-    color: #cdd6f4;
-    border-radius: 6px;
+    background: var(--pa-white);
+    border: 1px solid var(--pa-border-dark);
+    color: var(--pa-text);
+    border-radius: 4px;
     padding: 5px 8px;
     font-size: 13px;
+    font-family: inherit;
     cursor: pointer;
+    height: 32px;
   }
-  select:hover { border-color: #89b4fa; }
+  select:hover { border-color: var(--pa-blue); }
+  select:focus { outline: 2px solid var(--pa-blue); outline-offset: -1px; border-color: var(--pa-blue); }
 
-  /* CANVAS AREA */
+  /* ── CANVAS AREA ── */
   #canvas-container {
     flex: 1;
     overflow: auto;
     display: flex;
     align-items: center;
     justify-content: center;
-    background: #181825;
-    padding: 16px;
+    background: var(--pa-bg);
+    padding: 20px;
   }
 
   /* Placeholder quand aucune image */
@@ -98,86 +160,103 @@
     align-items: center;
     justify-content: center;
     gap: 16px;
-    color: #6c7086;
+    color: var(--pa-text-muted);
     text-align: center;
   }
-  #placeholder svg { opacity: 0.3; }
-  #placeholder p { font-size: 15px; }
+  #placeholder svg { opacity: 0.35; color: var(--pa-blue); }
+  #placeholder p { font-size: 14px; color: var(--pa-text-muted); }
   #placeholder .open-hint {
-    background: #313244;
-    border: 1px dashed #45475a;
-    border-radius: 12px;
-    padding: 32px 48px;
+    background: var(--pa-white);
+    border: 2px dashed var(--pa-border-dark);
+    border-radius: 4px;
+    padding: 36px 56px;
     cursor: pointer;
-    transition: all 0.2s;
+    transition: all 0.15s;
   }
   #placeholder .open-hint:hover {
-    border-color: #89b4fa;
-    color: #89b4fa;
-    background: #1e2a3a;
+    border-color: var(--pa-blue);
+    color: var(--pa-blue);
+    background: var(--pa-blue-light);
   }
 
   #canvas-wrapper {
     position: relative;
-    box-shadow: 0 8px 32px rgba(0,0,0,0.5);
+    box-shadow: 0 2px 8px rgba(0,0,0,0.12), 0 0 1px rgba(0,0,0,0.08);
     display: none;
   }
 
   canvas { display: block; }
 
-  /* BOTTOM BAR */
+  /* ── BOTTOM BAR ── */
   #bottombar {
-    background: #181825;
-    border-top: 1px solid #313244;
-    padding: 8px 16px;
+    background: var(--pa-surface);
+    border-top: 1px solid var(--pa-border);
+    padding: 6px 16px;
     display: flex;
     align-items: center;
     justify-content: space-between;
     flex-shrink: 0;
+    min-height: 40px;
   }
 
-  #status { font-size: 12px; color: #6c7086; }
-  #fileName { font-size: 12px; color: #a6adc8; max-width: 300px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  #status {
+    font-size: 12px;
+    color: var(--pa-text-muted);
+  }
+  #fileName {
+    font-size: 12px;
+    color: var(--pa-text-subtle);
+    max-width: 300px;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
 
-  /* Crop overlay */
+  /* ── Crop overlay ── */
   #cropOverlay {
     display: none;
     position: absolute;
     top: 0; left: 0;
-    background: rgba(0,0,0,0.5);
+    background: rgba(0,0,0,0.35);
     width: 100%; height: 100%;
     cursor: crosshair;
     z-index: 10;
   }
   #cropRect {
     position: absolute;
-    border: 2px dashed #89b4fa;
-    background: rgba(137,180,250,0.1);
+    border: 2px dashed var(--pa-blue);
+    background: rgba(0,120,212,0.08);
     pointer-events: none;
   }
 
-  /* Toast notification */
+  /* ── Toast notification ── */
   #toast {
     position: fixed;
-    bottom: 80px;
+    bottom: 60px;
     left: 50%;
-    transform: translateX(-50%) translateY(20px);
-    background: #313244;
-    color: #cdd6f4;
-    border: 1px solid #45475a;
-    border-radius: 10px;
-    padding: 12px 24px;
-    font-size: 14px;
+    transform: translateX(-50%) translateY(12px);
+    background: var(--pa-text);
+    color: var(--pa-white);
+    border-radius: 4px;
+    padding: 10px 20px;
+    font-size: 13px;
     font-weight: 600;
     opacity: 0;
-    transition: all 0.3s ease;
+    transition: all 0.2s ease;
     z-index: 200;
     pointer-events: none;
     white-space: nowrap;
+    box-shadow: 0 4px 12px rgba(0,0,0,0.2);
   }
   #toast.show { opacity: 1; transform: translateX(-50%) translateY(0); }
-  #toast.success { background: #1e3a2f; border-color: #a6e3a1; color: #a6e3a1; }
-  #toast.error { background: #3a1e1e; border-color: #f38ba8; color: #f38ba8; }
+  #toast.success {
+    background: var(--pa-success);
+    color: var(--pa-white);
+  }
+  #toast.error {
+    background: var(--pa-danger);
+    color: var(--pa-white);
+  }
 
   /* Input file caché */
   #fileInput { display: none; }
@@ -190,13 +269,13 @@
 <div id="toolbar">
 
   <div class="tool-group">
-    <span style="font-size:12px;color:#6c7086;margin-right:4px;">Sélection</span>
+    <span class="tool-group-label">Sélection</span>
     <button class="tool-btn active" id="btn-select" onclick="setTool('select')" title="Sélectionner/déplacer">↖ Sélect.</button>
     <button class="tool-btn danger" id="btn-delete" onclick="deleteSelected()" title="Supprimer l'élément sélectionné">🗑 Suppr.</button>
   </div>
 
   <div class="tool-group">
-    <span style="font-size:12px;color:#6c7086;margin-right:4px;">Formes</span>
+    <span class="tool-group-label">Formes</span>
     <button class="tool-btn" id="btn-arrow" onclick="setTool('arrow')" title="Flèche">→ Flèche</button>
     <button class="tool-btn" id="btn-rect" onclick="setTool('rect')" title="Rectangle">▭ Rect.</button>
     <button class="tool-btn" id="btn-circle" onclick="setTool('circle')" title="Cercle">○ Cercle</button>
@@ -204,12 +283,12 @@
   </div>
 
   <div class="tool-group">
-    <span style="font-size:12px;color:#6c7086;margin-right:4px;">Texte</span>
+    <span class="tool-group-label">Texte</span>
     <button class="tool-btn" id="btn-text" onclick="setTool('text')" title="Ajouter du texte">T Texte</button>
   </div>
 
   <div class="tool-group">
-    <span style="font-size:12px;color:#6c7086;margin-right:4px;">Image</span>
+    <span class="tool-group-label">Image</span>
     <button class="tool-btn" id="btn-crop" onclick="startCrop()" title="Zoomer sur une zone">🔍 Zoom</button>
     <button class="tool-btn" onclick="flipH()" title="Miroir horizontal">↔ Flip H</button>
     <button class="tool-btn" onclick="flipV()" title="Miroir vertical">↕ Flip V</button>
@@ -217,12 +296,12 @@
   </div>
 
   <div class="tool-group">
-    <label for="colorPicker" style="font-size:12px;color:#a6adc8;">Couleur</label>
+    <label for="colorPicker" class="tool-group-label">Couleur</label>
     <input type="color" id="colorPicker" value="#ff0000" onchange="updateColor(this.value)">
   </div>
 
   <div class="tool-group">
-    <label style="font-size:12px;color:#a6adc8;">Épaisseur</label>
+    <label class="tool-group-label">Épaisseur</label>
     <select id="strokeWidth" onchange="updateStroke(this.value)">
       <option value="2">2px</option>
       <option value="4" selected>4px</option>
@@ -386,7 +465,7 @@
       startX = p.x; startY = p.y;
       activeShape = new fabric.Rect({
         left: startX, top: startY, width: 0, height: 0,
-        fill: 'rgba(137,180,250,0.1)', stroke: '#89b4fa',
+        fill: 'rgba(0,120,212,0.06)', stroke: '#0078D4',
         strokeWidth: 1, strokeDashArray: [4, 4],
         selectable: false, evented: false, _isTextGuide: true
       });
