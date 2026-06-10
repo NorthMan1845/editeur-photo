@@ -288,14 +288,6 @@
   </div>
 
   <div class="tool-group">
-    <span class="tool-group-label">Image</span>
-    <button class="tool-btn" id="btn-crop" onclick="startCrop()" title="Zoomer sur une zone">🔍 Zoom</button>
-    <button class="tool-btn" onclick="flipH()" title="Miroir horizontal">↔ Flip H</button>
-    <button class="tool-btn" onclick="flipV()" title="Miroir vertical">↕ Flip V</button>
-    <button class="tool-btn" onclick="rotateImg(90)" title="Rotation 90°">↻ 90°</button>
-  </div>
-
-  <div class="tool-group">
     <label for="colorPicker" class="tool-group-label">Couleur</label>
     <input type="color" id="colorPicker" value="#ff0000" onchange="updateColor(this.value)">
   </div>
@@ -308,6 +300,14 @@
       <option value="6">6px</option>
       <option value="10">10px</option>
     </select>
+  </div>
+
+  <div class="tool-group">
+    <span class="tool-group-label">Image</span>
+    <button class="tool-btn" id="btn-crop" onclick="startCrop()" title="Couper une zone">✂ Couper</button>
+    <button class="tool-btn" onclick="flipH()" title="Miroir horizontal">↔ Flip H</button>
+    <button class="tool-btn" onclick="flipV()" title="Miroir vertical">↕ Flip V</button>
+    <button class="tool-btn" onclick="rotateImg(90)" title="Rotation 90°">↻ 90°</button>
   </div>
 
   <div class="tool-group">
@@ -342,7 +342,7 @@
     <span id="status">Aucune image chargée</span>
     <span id="fileName"></span>
   </div>
-  <button class="tool-btn success" onclick="saveImage()" title="Sauvegarder l'image">💾 Sauvegarder</button>
+  <button class="tool-btn success" onclick="saveImage()" title="Sauvegarder l'image">Sauvegarder</button>
 </div>
 
 <script>
